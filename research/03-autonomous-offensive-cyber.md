@@ -29,6 +29,10 @@ Booz Allen tested advanced U.S. and Chinese models against common tasks and cond
 
 A model can perform well at one task and less well at the other. The addendum describes different strengths among the leading systems: one was stronger at autonomous intrusion execution, while another scored higher on vulnerability research. That distinction matters more than the overall rank when assessing a specific risk.
 
+![Booz Allen's original Cyber Weapon Index rankings of 18 AI models](images/booz-allen-cwi-original-rankings.png)
+
+*Figure 1. Booz Allen’s original Cyber Weapon Index rankings. VRS measures vulnerability research; KCAS measures progress through the intrusion test. These rankings are a historical baseline: the report’s later addendum supersedes them with new model testing.*
+
 ## Key Findings
 
 ### 1. End-to-end execution is possible in a controlled test
