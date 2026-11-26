@@ -1,1206 +1,246 @@
-# ThreatLens — Development Log
+# ThreatLens — Development Log (Condensed)
 
-## November 25, 2026
+**Project:** ThreatLens, a security-first threat intelligence pipeline, part of the Agentic AI Security Lab
+**Date:** November 25, 2026
+**Branch:** `feature/threatlens-mvp`
+**Stack:** Python 3.12.10, HTTPX, Pydantic, PyYAML, pytest, coverage.py, Bandit, pip-audit, pip-tools (hash-locked dependencies)
 
-### Phase 1A — Project Initialization
+---
 
-**Status:** Complete
+## 1. Summary
 
-- Established a modular project architecture within the Agentic AI Security Lab repository.
-- Configured Python 3.12.10 and an isolated virtual environment.
-- Installed and verified initial application dependencies.
-- Implemented Git ignore rules to protect credentials, local data, virtual environments, and IDE configuration.
-- Established a dedicated feature branch for MVP development.
-- Committed and pushed the initial project structure.
+ThreatLens is built deterministic-first: a secure, fully tested intelligence pipeline comes **before** any AI or agentic functionality. External intelligence is treated as untrusted data at every stage, and AI features stay disabled until the foundation is verified.
 
-### Phase 1B — Intelligence Collection
+**Where it stands (end of Phase 1D.1):**
 
-**Status:** In Progress
+| Metric | Result |
+|---|---:|
+| Automated tests | 231 / 231 passing |
+| Statement / branch / combined coverage | 99% / 99% / 99.30% combined (98% minimum threshold proposed) |
+| Bandit findings (1,260 lines scanned) | 0 |
+| pip-audit known vulnerabilities (all 7 assessment targets) | 0 |
+| Hash-pinned lock file entries | 997 |
+| Clean-environment rebuilds verified | Runtime, development, remediated runtime |
+| Live CISA KEV records processed | 1,805 |
+| End-to-end pipeline time | 2.20–2.27 s (clean environments) |
+| Pipeline exit code | 0 (SUCCESS) |
 
-**Objective:** Develop a deterministic, security-conscious intelligence collection pipeline before introducing AI-powered analysis and agentic workflows.
+---
 
-**Engineering Decisions:**
+## 2. Pipeline Architecture
 
-- Centralize intelligence source configuration.
-- Establish approved source and hostname allowlists.
-- Define network request limits and security policies.
-- Require structured input validation.
-- Treat externally retrieved intelligence as untrusted data.
-- Preserve human oversight for future agentic operations.
-- Disable AI functionality until the foundational intelligence pipeline is operational.
+```
+CISA KEV (HTTPS) → Collector → Schema validation → Normalizer → Deduplicator → JSON storage (+SHA-256) → Reload & verify
+                   └──────────── orchestrated by main.py, with logging, stats, and exit codes ────────────┘
+```
 
-**Security Concepts Explored:**
+**Core design principles**
 
-- Dependency isolation
-- Secrets management
-- Secure configuration management
-- Source allowlisting
-- Data provenance
-- Resource consumption limits
-- Trust boundaries
-- Safe YAML parsing
+- Centralized, allowlisted source configuration (HTTPS only, exact hostnames, fail-closed)
+- Structured data contracts (Pydantic) with provenance, UTC timestamps, and human-review defaults
+- Deterministic UUID5 record IDs, enabling idempotent processing and deduplication
+- Bounded resources: response size, retries, delays, file sizes
+- Evidence preservation: raw and processed snapshots stored separately, integrity-checked
 
-**Next Milestone:** Implement structured intelligence schemas and the CISA KEV collector.
-### Phase 1B.2 — Intelligence Data Contracts
+---
 
-**Status:** Complete upon successful test execution.
+## 3. Phase 1B: Building the Pipeline
 
-**Implementation:**
+| Phase | What was built | Tests added | Cumulative tests |
+|---|---|---:|---:|
+| **1A** Project init | Modular repo, Python 3.12 venv, `.gitignore` for secrets/data/IDE, feature branch | n/a | n/a |
+| **1B.1** Planning | Source allowlists, request limits, untrusted-data posture, AI disabled | n/a | n/a |
+| **1B.2** Data contracts | Pydantic schemas for CISA KEV and a standard intelligence record; CVE format, date, and length validation; AI-analysis and human-review status fields | 7 | n/a |
+| **1B.3** Secure config | Safe YAML loader; HTTPS-only, exact-hostname allowlist; rejects embedded credentials, odd ports, fragments, malformed URLs (SSRF-oriented) | parameterized | n/a |
+| **1B.4** CISA collector | HTTPX collector, TLS verification, redirects disabled, bounded retries with backoff, streaming size cap, content-type and JSON validation, catalog count checks | 12 | n/a |
+| **1B.5** Normalization | Source-to-standard field mapping, UUID5 IDs, rule-based tagging, conservative severity defaults | 10 | 48 |
+| **1B.6** Deduplication | Dictionary-based dedup, latest-timestamp selection, deterministic tie handling, source attribution preserved | 10 | 58 |
+| **1B.7** Persistence | Timestamped JSON snapshots, atomic writes, SHA-256 checksums, path restrictions, schema revalidation on load | 13 | 71 |
+| **1B.8** Orchestration | `main.py` entry point, UTC logging, pipeline stats, end-to-end integrity checks, controlled exit codes | 13 | 84 |
 
-- Developed source-specific Pydantic schemas for CISA KEV intelligence.
-- Established a standardized intelligence record for future multi-source integration.
-- Implemented source provenance and UTC collection timestamps.
-- Introduced enumerated intelligence classifications and trust levels.
-- Implemented CVE format validation, required-field validation, date validation, and input length restrictions.
-- Established AI analysis and human review status fields.
-- Developed seven automated schema validation tests using synthetic intelligence.
+**Notable live validations**
 
-**Security Concepts Explored:**
+- **Dedup (1B.6):** 1,805 live records were deliberately duplicated to 3,610. The deduplicator retained 1,805 unique records and removed all 1,805 injected duplicates, with 100% of the originals retained.
+- **Full pipeline (1B.8):** 1,805 collected → 1,805 normalized → 1,805 unique → 1,805 reloaded. Integrity check passed in 2.09 s.
 
-- Defensive input validation
-- Structured data contracts
-- Data integrity
-- Trust boundaries
-- Secure defaults
-- Data provenance
-- Automated testing
-- Separation of source-specific and internal data models
+**Troubleshooting note (1B.5):** Normalization tests failed after the schemas were expanded (source version, publication timestamp, supporting notes). Replacing the schema module with a consolidated implementation fixed it, and all 48 tests passed. This reinforced that schema changes ripple downstream and that regression tests catch integration breaks early.
 
-**Design Consideration:** Schema validation improves data integrity but does not establish factual accuracy or eliminate prompt injection risks. External intelligence remains untrusted throughout the processing pipeline.
-
-**Next Milestone:** Implement secure configuration loading and the CISA KEV intelligence collector.
-### Phase 1B.3 — Secure Configuration Management
+---
 
-**Status:** Complete upon successful test execution.
+## 4. Phase 1C: Security Hardening
 
-**Implementation:**
+**Method:** pip-audit (dependencies), Bandit (static analysis), statement and branch coverage, targeted adversarial regression tests, repository and secret hygiene checks, and finally threat modeling.
 
-- Implemented centralized YAML configuration loading.
-- Established custom configuration and security exceptions.
-- Enforced intelligence source activation policies.
-- Implemented HTTPS-only source validation.
-- Established exact hostname allowlisting.
-- Restricted embedded credentials, unauthorized ports, malformed URLs, and URL fragments.
-- Developed parameterized security tests for unauthorized intelligence sources.
+### 1C.1: Baseline audit
 
-**Security Concepts Explored:**
-
-- Server-Side Request Forgery (SSRF)
-- Network trust boundaries
-- Allowlist-based security
-- Fail-closed validation
-- Secure configuration management
-- Exception handling
-- Adversarial input testing
-- Parameterized automated testing
+- pip-audit v2.10.1: **0** known vulnerabilities (installed and declared)
+- Bandit v1.9.4: **0** findings across 956 lines
+- Tests: 84/84 · Statement 95% · Branch 84% · Combined 93%
+- Secret and repository hygiene verified (`.env`, venv, coverage artifacts, snapshots, and audit reports are all git-ignored; only `.env.example` was found)
 
-**Design Limitations:**
+![Coverage baseline: 93% combined](images/coverage-1c1-baseline-93.png)
 
-URL validation provides an initial defensive layer but does not independently eliminate SSRF. Additional protections are required for DNS resolution, redirects, network egress, configuration integrity, and response size enforcement.
+*Weakest areas at baseline: `config_loader.py` (85% combined), `json_storage.py` (89%), `main.py` (95%), `cisa_collector.py` (94%).*
 
-**Next Milestone:** Implement the CISA KEV intelligence collector using HTTPX and validated source configuration.
-### Phase 1B.4 — CISA KEV Intelligence Collection
-
-**Status:** Pending verification.
-
-**Implementation:**
-
-- Developed an HTTPX-based CISA KEV intelligence collector.
-- Integrated approved source configuration and URL validation.
-- Implemented TLS certificate verification and disabled automatic redirects.
-- Established bounded network retries and exponential backoff.
-- Implemented streaming response size restrictions.
-- Validated HTTP response content types and JSON structures.
-- Integrated Pydantic catalog validation.
-- Implemented catalog count consistency checks.
-- Developed 12 automated collector tests using mocked HTTP responses.
-
-**Security Concepts Explored:**
-
-- Secure API integration
-- Network trust boundaries
-- Resource exhaustion prevention
-- Defensive response validation
-- Secure logging
-- Resilient error handling
-- HTTP request mocking
-- Regression testing
-- Defense in depth
-
-**Verification Results:**
-
-- Collector tests: Pending
-- Total regression tests: Pending
-- Statement coverage: Pending
-- Live CISA collection: Pending
-- Total vulnerabilities retrieved: Pending
-
-**Next Milestone:** Normalize collected vulnerability intelligence into standardized ThreatLens intelligence records and implement deduplication.
-### Phase 1B.5 — Intelligence Normalization
-
-**Status:** Pending verification.
-
-**Implementation:**
-
-- Developed a standardized intelligence normalization engine.
-- Implemented source-specific field mapping.
-- Introduced deterministic UUID5 record identifiers.
-- Expanded intelligence schemas to preserve supporting notes and catalog metadata.
-- Preserved source attribution, publication timestamps, and collection timestamps.
-- Implemented rule-based intelligence tagging.
-- Maintained conservative severity classifications and human review defaults.
-- Developed ten automated normalization tests.
-
-**Security and Engineering Concepts Explored:**
-
-- Data normalization
-- Idempotent processing
-- Deterministic identifiers
-- Intelligence provenance
-- Data integrity
-- Evidence preservation
-- Separation of collection and analysis
-- Regression testing
-
-**Verification Results:**
-
-- Normalization tests: Pending
-- Total regression tests: Pending
-- Statement coverage: Pending
-- Live records normalized: Pending
+### 1C.2: Configuration security regression tests
 
-**Next Milestone:** Implement intelligence deduplication and local JSON persistence.
-### Phase 1B.4 — Verification Results
-
-- Collector tests: 12/12 passed
-- Collector statement coverage: 95%
-- Live CISA collection: Successful
-- First retrieved vulnerability: CVE-2026-103406
-- Status: Complete
-
-### Phase 1B.5 — Verification Results
-
-- Normalization tests: 10/10 passed
-- Normalizer statement coverage: 100%
-- Intelligence schema statement coverage: 100%
-- Total regression tests: 48/48 passed
-- Overall statement coverage: 95%
-- Regression suite execution time: 6.48 seconds
-- Live normalization: Pending verification
-
-**Troubleshooting and Resolution:**
-
-Initial normalization tests failed following modifications to the intelligence schemas. The schema module was replaced with a consolidated implementation incorporating source version, source publication timestamp, and supporting notes.
-
-Following the update, compilation succeeded and all 48 regression tests passed.
-
-**Lessons Learned:**
-
-- Schema changes must remain compatible with downstream processing components.
-- Regression testing helps identify integration failures following data contract modifications.
-- Statement coverage provides measurable insight into testing completeness but does not guarantee security or correctness.
-- Synthetic testing and live integration testing serve different verification purposes.
-### Phase 1B.6 — Intelligence Deduplication
-
-**Status:** Pending verification.
-
-**Implementation:**
-
-- Developed a dictionary-based intelligence deduplication engine.
-- Integrated deterministic record identifiers.
-- Implemented timestamp-based record selection.
-- Preserved independent intelligence source attribution.
-- Established deterministic handling of timestamp ties.
-- Implemented operational logging for duplicate removal.
-- Developed ten automated deduplication tests.
-
-**Security and Engineering Concepts Explored:**
-
-- Data integrity
-- Idempotent processing
-- Deterministic record identity
-- Algorithmic efficiency
-- Intelligence provenance
-- Data consistency
-- Non-destructive input processing
-- Regression testing
-
-**Verification Results:**
-
-- Deduplication tests: Pending
-- Total regression tests: Pending
-- Statement coverage: Pending
-- Live intelligence records processed: Pending
-- Duplicate records removed: Pending
-
-**Next Milestone:** Implement local JSON persistence and integrate the intelligence pipeline through the application entry point.
-### Phase 1B.6 — Intelligence Deduplication
-
-**Status:** Complete
-
-**Verification Results:**
-
-- Deduplication tests: 10/10 passed
-- Deduplication statement coverage: 100%
-- Total regression tests: 58/58 passed
-- Overall statement coverage: 95%
-- Executable statements: 250
-- Uncovered statements: 12
-- Regression suite execution time: 6.51 seconds
-
-**Live Intelligence Validation:**
-
-- Original CISA KEV records: 1,805
-- Intentionally duplicated input records: 3,610
-- Unique records retained: 1,805
-- Duplicate records removed: 1,805
-- Introduced duplicate removal rate: 100%
-- Original record retention rate: 100%
-
-**Outcome:**
-
-Successfully validated the collection, normalization, and deduplication pipeline using live CISA KEV intelligence. All original intelligence records were preserved while intentionally introduced duplicates were removed.
-
-**Next Milestone:** Implement local JSON persistence and application orchestration.
-### Phase 1B.7 — Local Intelligence Persistence
-
-**Status:** Pending verification
-
-**Implementation:**
-
-- Developed a local JSON intelligence storage engine.
-- Established separate source-specific and processed intelligence directories.
-- Implemented unique timestamped intelligence snapshots.
-- Implemented atomic file replacement.
-- Integrated SHA-256 integrity verification.
-- Implemented storage path restrictions.
-- Established schema revalidation during intelligence retrieval.
-- Developed thirteen automated storage tests.
-- Utilized isolated temporary directories for automated testing.
-
-**Security and Engineering Concepts Explored:**
-
-- Data persistence
-- Data serialization and deserialization
-- File integrity verification
-- Cryptographic hashing
-- Atomic file operations
-- Path traversal prevention
-- Evidence preservation
-- Test environment isolation
-- Data lifecycle management
-
-**Verification Results:**
-
-- Storage tests: Pending
-- Total regression tests: Pending
-- Overall statement coverage: Pending
-- Live records persisted: Pending
-- Live records reloaded: Pending
-- Round-trip validation: Pending
-
-**Next Milestone:** Implement the ThreatLens application entry point and end-to-end pipeline orchestration.
-### Phase 1B.7 — Local Intelligence Persistence
-
-**Status:** Complete
-
-**Implementation:**
-
-- Developed a local JSON intelligence storage engine.
-- Established separate source-specific and processed intelligence directories.
-- Implemented unique timestamped intelligence snapshots.
-- Implemented atomic file replacement.
-- Integrated SHA-256 integrity verification.
-- Implemented storage path restrictions and schema revalidation.
-- Developed thirteen automated storage tests.
-
-**Verification Results:**
-
-- Storage tests: 13/13 passed
-- Storage statement coverage: 90%
-- Total regression tests: 71/71 passed
-- Overall statement coverage: 94%
-- Executable statements: 342
-- Uncovered statements: 21
-- Regression execution time: 7.61 seconds
-- Live records persisted: 1,805
-- Live records reloaded: 1,805
-- Unique record identifiers: 1,805
-- Record count validation: Passed
-- Checksum verification: Passed
-- Schema revalidation: Passed
-- Git exclusions: Verified
-
-**Version Control:**
-
-- Branch: feature/threatlens-mvp
-- Implementation commit: cfd3b4f
-- Remote synchronization: Successful
-
-**Next Milestone:** Application orchestration and end-to-end pipeline testing.
-### Phase 1B.8 — Application Orchestration
-
-**Status:** Pending verification
-
-**Implementation:**
-
-- Developed the ThreatLens application entry point.
-- Integrated collection, validation, normalization, deduplication, and storage components.
-- Implemented centralized application logging with UTC timestamps.
-- Implemented pipeline execution statistics and performance measurement.
-- Established end-to-end intelligence integrity verification.
-- Implemented controlled exception handling and application exit codes.
-- Developed thirteen automated application orchestration tests.
-- Established single-command application execution.
-
-**Security and Engineering Concepts Explored:**
-
-- Application orchestration
-- Modular software architecture
-- Operational observability
-- Defensive programming
-- Exception handling
-- Integration testing
-- End-to-end data integrity
-- Process exit codes
-- Automation readiness
-
-**Verification Results:**
-
-- Application orchestration tests: Pending
-- Total regression tests: Pending
-- Overall statement coverage: Pending
-- Live application execution: Pending
-- Intelligence records processed: Pending
-- Integrity verification: Pending
-- Application exit code: Pending
-
-**Next Milestone:** Foundational pipeline security hardening, documentation, and MVP release preparation.
-### Phase 1B.8 — Application Orchestration
-
-**Status:** Complete
-
-**Implementation:**
-
-- Developed the ThreatLens application entry point.
-- Integrated collection, validation, normalization, deduplication, and storage components.
-- Implemented centralized application logging with UTC timestamps.
-- Implemented execution statistics and performance measurement.
-- Established end-to-end intelligence integrity verification.
-- Implemented controlled exception handling and application exit codes.
-- Developed thirteen automated application orchestration tests.
-- Established single-command application execution.
-
-**Automated Verification Results:**
-
-- Application orchestration tests: 13/13 passed
-- Application statement coverage: 97%
-- Total regression tests: 84/84 passed
-- Overall statement coverage: 95%
-- Executable statements: 453
-- Uncovered statements: 24
-- Regression execution time: 10.66 seconds
-
-**Live Application Verification:**
-
-- Intelligence source: CISA KEV
-- Catalog version: 2026.11.25
-- Records collected: 1,805
-- Records normalized: 1,805
-- Unique records retained: 1,805
-- Duplicates removed: 0
-- Records reloaded: 1,805
-- Integrity verification: Passed
-- Pipeline execution time: 2.09 seconds
-- Application exit code: 0
-- Pipeline status: SUCCESS
-
-**Outcome:**
-
-Successfully executed the complete ThreatLens intelligence pipeline as a standalone application. All collected intelligence records were normalized, persisted, reloaded, and verified without unexpected data loss.
-
-**Next Milestone:** Foundational pipeline security hardening, documentation, and MVP release preparation.
-### Phase 1C — Foundational Security Hardening
-
-**Status:** In Progress
-
-**Objective:**
-
-Evaluate and strengthen the security posture of the ThreatLens foundational intelligence pipeline before introducing AI-powered analysis and autonomous workflows.
-
-**Assessment Methodology:**
-
-- Software composition analysis using pip-audit
-- Static application security testing using Bandit
-- Statement and branch coverage analysis
-- Configuration security review
-- Intelligence ingestion security review
-- Local storage security review
-- Secret management and Git exclusion verification
-- Threat modeling and trust boundary analysis
-- Security regression testing
-
-**Baseline Metrics:**
-
-- Automated tests: 84
-- Statement coverage: 95%
-- Executable statements: 453
-- Live intelligence records successfully processed: 1,805
-- Pipeline execution time: 2.09 seconds
-
-**Assessment Results:**
-
-- Dependency vulnerabilities: Pending
-- Static analysis findings: Pending
-- Branch coverage: Pending
-- Secret exclusion verification: Pending
-- Threat model review: Pending
-- Remediation and regression testing: Pending
-
-**Next Milestone:** Address identified security findings, document residual risks, and prepare the foundational MVP for release.
-### Phase 1C.1 — Foundational Security Audit
-
-**Status:** Baseline assessment complete
-
-**Assessment Date:** November 25, 2026
-
-**Software Composition Analysis:**
-
-- Tool: pip-audit v2.10.1
-- Installed environment vulnerabilities: 0 known vulnerabilities identified
-- Declared dependency vulnerabilities: 0 known vulnerabilities identified
-- Dependency consistency: Passed
-
-**Static Application Security Testing:**
-
-- Tool: Bandit v1.9.4
-- Lines of code scanned: 956
-- High-severity findings: 0
-- Medium-severity findings: 0
-- Low-severity findings: 0
-- Suppressed findings: 0
-- Skipped files: 0
-
-**Automated Testing and Coverage:**
-
-- Total automated tests: 84/84 passed
-- Statement coverage: 95%
-- Branch coverage: 84%
-- Combined coverage: 93%
-- Executable statements: 453
-- Uncovered statements: 24
-- Branch destinations: 80
-- Partial branches: 13
-- Regression execution time: 10.96 seconds
-
-**Secret Management and Repository Hygiene:**
-
-- Environment file exclusions: Verified
-- Virtual environment exclusions: Verified
-- Coverage artifact exclusions: Verified
-- Intelligence snapshot exclusions: Verified
-- Security audit report exclusions: Verified
-- Sensitive filename screening: Passed
-- Only .env.example identified by the filename screening command
-
-**Assessment Limitations:**
-
-Automated scanning did not identify known dependency vulnerabilities or insecure coding patterns within the assessed scope. These results do not establish the absence of vulnerabilities. Manual threat modeling, adversarial testing, and additional security control verification remain necessary.
-
-**Next Milestone:** Targeted security regression testing and architectural hardening.
-### Phase 1C.2 — Configuration Security Regression Testing
-
-**Status:** Complete
-
-**Assessment Date:** November 25, 2026
-
-**Implementation:**
-
-- Developed 30 additional configuration security test cases.
-- Verified rejection of malformed and missing configuration files.
-- Verified rejection of unsafe YAML object construction.
-- Validated malformed intelligence source registries.
-- Verified rejection of invalid URL and allowlist types.
-- Validated explicit source enablement requirements.
-- Verified case-insensitive hostname validation.
-- Verified standard HTTPS port handling.
-
-**Verification Results:**
-
-| Metric | Before | After |
-|---|---:|---:|
-| Automated tests | 84 | 114 |
-| Statement coverage | 95% | 96% |
-| Branch coverage | 84% | 91% |
-| Combined coverage | 93% | 96% |
-| Configuration statement coverage | 87% | 100% |
-| Configuration branch coverage | 80% | 100% |
-| Uncovered statements | 24 | 16 |
-| Partial branches | 13 | 7 |
-
-**Additional Results:**
-
-- Configuration hardening tests: 30/30 passed
-- Configuration hardening execution time: 0.46 seconds
-- Total regression tests: 114/114 passed
-- Regression execution time: 12.20 seconds
-- Failed tests: 0
-- HTML coverage report: Successfully generated
-- Proposed statement and branch coverage targets: Achieved
-
-**Outcome:**
-
-Successfully expanded adversarial configuration testing and achieved complete measured statement and branch coverage of the configuration loader without introducing regressions.
-
-**Next Milestone:** Storage and collector security hardening, application integrity testing, and residual risk assessment.
-### Phase 1C.3 — Storage Security Hardening
-
-**Status:** Complete
-
-**Assessment Date:** November 25, 2026
-
-**Objective:**
-
-Strengthen the security and reliability of local intelligence storage before introducing AI-powered analysis and agentic workflows.
-
-**Implementation:**
-
-- Established a maximum intelligence snapshot size of 50 MiB.
-- Established a maximum checksum file size of 128 bytes.
-- Implemented bounded filesystem reads.
-- Implemented SHA-256 checksum format and encoding validation.
-- Implemented strict JSON parsing controls.
-- Implemented duplicate JSON key rejection.
-- Implemented nonstandard numeric constant rejection.
-- Implemented top-level JSON structure validation.
-- Improved atomic write exception handling.
-- Implemented best-effort incomplete snapshot cleanup.
-- Added protection against ordinary snapshot filename collisions.
-- Developed 25 additional storage security regression tests.
-
-**Automated Testing Results:**
-
-| Metric | Before | After |
-|---|---:|---:|
-| Total automated tests | 114 | 139 |
-| Statement coverage | 96% | 98% |
-| Branch coverage | 91% | 94% |
-| Combined coverage | 96% | 97% |
-| Storage statement coverage | 90% | 97% |
-| Storage branch coverage | 75% | 95% |
-| Storage combined coverage | 89% | 97% |
-| Executable statements | 453 | 499 |
-| Uncovered statements | 16 | 11 |
-| Partial branches | 7 | 6 |
-
-**Additional Verification:**
-
-- Storage security tests: 25/25 passed
-- Storage security execution time: 2.00 seconds
-- Existing storage functionality tests: 13/13 passed
-- Storage functionality execution time: 1.22 seconds
-- Full regression tests: 139/139 passed
-- Full regression execution time: 12.85 seconds
-- HTML coverage regression: 139/139 passed
-- HTML coverage regression execution time: 16.10 seconds
-
-**Static Application Security Testing:**
-
-- Tool: Bandit
-- Lines of code scanned: 1,042
-- High-severity findings: 0
-- Medium-severity findings: 0
-- Low-severity findings: 0
-- Suppressed findings: 0
-- Skipped files: 0
-
-**Live Application Verification:**
-
-- Intelligence source: CISA KEV
-- Catalog version: 2026.11.25
-- HTTP response: 200 OK
-- Records collected: 1,805
-- Records normalized: 1,805
-- Unique records: 1,805
-- Duplicates removed: 0
-- Records reloaded: 1,805
-- Snapshot integrity verified: True
-- Pipeline execution time: 2.27 seconds
-- Application exit code: 0
-- Pipeline status: SUCCESS
-
-**Outcome:**
-
-Successfully implemented and verified additional storage security controls without introducing functional regressions. All proposed MVP coverage targets remain satisfied.
-
-**Residual Risks:**
-
-- SHA-256 checksums provide integrity verification but not independent authenticity.
-- Snapshot and checksum persistence is not fully transactional.
-- Filesystem race conditions remain possible.
-- Snapshot retention policies remain unimplemented.
-- File size limits do not independently guarantee bounded parsing memory or execution time.
-- Structurally valid intelligence remains untrusted external content.
-- Automated security scanning does not establish the absence of vulnerabilities.
-
-**Next Milestone:** Phase 1C.4 — Collector Security Hardening.
-### Phase 1C.4 — Collector Security Hardening
-
-**Status:** In Progress — Pending Verification
-
-**Objective:**
-
-Strengthen the external intelligence ingestion boundary and reduce the risk of malformed intelligence, resource exhaustion, unauthorized network requests, and intelligence poisoning.
-
-**Implementation:**
-
-- Expanded collection configuration validation.
-- Implemented collection limit revalidation before network requests.
-- Implemented source URL revalidation.
-- Implemented strict Content-Length validation.
-- Implemented compressed response rejection.
-- Implemented declared and received response size consistency checks.
-- Implemented empty response rejection.
-- Implemented duplicate JSON key rejection.
-- Implemented nonstandard JSON constant rejection.
-- Implemented duplicate CVE identifier detection.
-- Established a maximum retry delay of 60 seconds.
-- Improved retryable HTTP status logging.
-- Developed 44 additional collector security regression tests.
-- Preserved existing collector functionality and public interfaces.
-
-**Verification Results:**
-
-- Collector security tests: Pending
-- Existing collector functionality tests: Pending
-- Full regression tests: Pending
-- Statement coverage: Pending
-- Branch coverage: Pending
-- Combined coverage: Pending
-- Static security analysis: Pending
-- Live intelligence collection: Pending
-- Application exit code: Pending
-
-**Residual Risks:**
-
-- DNS-level SSRF protections and network egress restrictions remain unimplemented.
-- HTTP request timeouts do not enforce a strict end-to-end execution deadline.
-- Retry-After header handling remains unimplemented.
-- Response size limits do not guarantee bounded JSON parsing memory consumption.
-- Structurally valid intelligence may still contain misleading or adversarial content.
-- Compressed response rejection may affect compatibility with future intelligence providers.
-- Source authenticity and semantic intelligence verification require additional controls.
-
-**Next Milestone:** Phase 1C.5 — Application Integrity Testing.
-### Phase 1C.4 — Collector Security Hardening
-
-**Status:** Complete
-
-**Assessment Date:** November 25, 2026
-
-**Objective:**
-
-Strengthen the external intelligence ingestion boundary and reduce the risk of malformed intelligence, resource exhaustion, unauthorized network requests, and intelligence poisoning.
-
-**Implementation:**
-
-- Expanded collection configuration validation.
-- Implemented collection limit revalidation before network requests.
-- Implemented source URL revalidation.
-- Implemented strict Content-Length validation.
-- Implemented compressed response rejection.
-- Implemented declared and received response size consistency checks.
-- Implemented empty response rejection.
-- Implemented duplicate JSON key rejection.
-- Implemented nonstandard JSON constant rejection.
-- Implemented duplicate CVE identifier detection.
-- Established a maximum retry delay of 60 seconds.
-- Improved retryable HTTP status logging.
-- Developed 45 additional collector security regression tests.
-- Preserved existing collector functionality and public interfaces.
-
-**Automated Testing Results:**
-
-| Metric | Before | After |
-|---|---:|---:|
-| Automated tests | 139 | 184 |
-| Statement coverage | 98% | 99% |
-| Branch coverage | 94% | 96% |
-| Combined coverage | 97% | 98% |
-| Collector statement coverage | 95% | 100% |
-| Collector branch coverage | 91% | 100% |
-| Collector combined coverage | 94% | 100% |
-| Executable statements | 499 | 533 |
-| Uncovered statements | 11 | 7 |
-| Partial branches | 6 | 4 |
-
-**Additional Verification:**
-
-- Collector security tests: 45/45 passed
-- Collector security execution time: 3.80 seconds
-- Existing collector functionality tests: 12/12 passed
-- Collector functionality execution time: 5.89 seconds
-- Full regression tests: 184/184 passed
-- Full regression execution time: 17.97 seconds
-- HTML coverage regression: 184/184 passed
-- HTML coverage execution time: 16.52 seconds
-
-**Static Application Security Testing:**
-
-- Tool: Bandit
-- Lines of code scanned: 1,143
-- High-severity findings: 0
-- Medium-severity findings: 0
-- Low-severity findings: 0
-- Suppressed findings: 0
-- Skipped files: 0
-
-**Live Application Verification:**
-
-- Intelligence source: CISA KEV
-- Catalog version: 2026.11.25
-- HTTP response: 200 OK
-- Collection attempts: 1
-- Records collected: 1,805
-- Records normalized: 1,805
-- Unique records: 1,805
-- Duplicates removed: 0
-- Records reloaded: 1,805
-- Snapshot integrity verified: True
-- Pipeline execution time: 2.51 seconds
-- Application exit code: 0
-- Pipeline status: SUCCESS
-
-**Outcome:**
-
-Successfully strengthened the external intelligence collection boundary without introducing functional regressions. Achieved complete measured statement and branch coverage of the CISA collector and exceeded all established MVP coverage targets.
-
-**Residual Risks:**
-
-- DNS-level SSRF protections and network egress restrictions remain unimplemented.
-- HTTP request timeouts do not enforce a strict end-to-end execution deadline.
-- Retry-After header handling remains unimplemented.
-- Response size limits do not guarantee bounded JSON parsing memory consumption.
-- Structurally valid intelligence may still contain misleading or adversarial content.
-- Compressed response rejection may affect compatibility with future intelligence providers.
-- Source authenticity and semantic intelligence verification require additional controls.
-- Complete code coverage does not establish the absence of vulnerabilities.
-
-**Next Milestone:** Phase 1C.5 — Application Integrity Testing.
-### Phase 1C.5 — Application Integrity Testing
-
-**Status:** In Progress — Pending Verification
-
-**Objective:**
-
-Strengthen application-level integrity verification and ensure that inconsistent, modified, incomplete, or corrupted intelligence cannot produce a successful pipeline result.
-
-**Implementation:**
-
-- Expanded logging configuration validation.
-- Restricted verbose third-party HTTP logging.
-- Implemented normalized intelligence consistency verification.
-- Implemented deterministic record identity verification.
-- Implemented source provenance and collection timestamp verification.
-- Implemented source intelligence field comparisons.
-- Implemented duplicate normalized CVE detection.
-- Established an independent deep-copy verification baseline.
-- Implemented deduplication identity and content verification.
-- Implemented latest-record selection verification.
-- Expanded raw and processed snapshot round-trip verification testing.
-- Tested same-count intelligence modifications.
-- Tested in-place intelligence mutations.
-- Tested storage failure propagation.
-- Tested sanitized exception logging.
-- Tested application entry point behavior.
-- Preserved existing application interfaces and controlled exit codes.
-
-**Verification Results:**
-
-- Application integrity tests: Pending
-- Existing pipeline functionality tests: Pending
-- Full regression tests: Pending
-- Statement coverage: Pending
-- Branch coverage: Pending
-- Combined coverage: Pending
-- Static security analysis: Pending
-- Live intelligence collection: Pending
-- Snapshot integrity verification: Pending
-- Application exit code: Pending
-
-**Residual Risks:**
-
-- Failed pipeline executions may leave unverified or incomplete snapshots on disk.
-- Snapshot persistence is not transactional across the complete collection run.
-- SHA-256 checksums do not provide cryptographic source authentication.
-- Verification logic shares the application's execution environment and trust boundary.
-- Deep-copy verification introduces additional memory consumption.
-- Conflicting records with identical collection timestamps retain the first encountered record.
-- Normalization verification does not independently validate every enrichment or classification field.
-- Structurally valid intelligence may still contain misleading or adversarial content.
-- AI-specific security controls remain outside the foundational MVP scope.
-
-**Next Milestone:** Phase 1C.6 — Threat Model and Residual Risk Documentation.
-### Phase 1C.5 — Application Integrity Testing
-
-**Status:** Complete
-
-**Assessment Date:** November 25, 2026
-
-**Objective:**
-
-Strengthen application-level integrity verification and ensure that detected inconsistencies, unauthorized modifications, incomplete processing, and corrupted intelligence cannot produce a successful pipeline result.
-
-**Implementation:**
-
-- Expanded logging configuration validation.
-- Restricted verbose third-party HTTP logging.
-- Implemented normalized intelligence consistency verification.
-- Implemented deterministic record identity verification.
-- Implemented source provenance and collection timestamp verification.
-- Implemented source intelligence field comparisons.
-- Implemented duplicate normalized CVE detection.
-- Established an independent deep-copy verification baseline.
-- Implemented deduplication identity and content verification.
-- Implemented latest-record selection verification.
-- Expanded raw and processed snapshot round-trip verification testing.
-- Tested same-count intelligence modifications.
-- Tested in-place intelligence mutations.
-- Tested storage failure propagation.
-- Tested sanitized exception logging.
-- Tested application entry point behavior.
-- Developed 47 additional application integrity regression tests.
-- Preserved existing application interfaces and controlled exit codes.
-
-**Automated Testing Results:**
-
-| Metric | Before | After |
-|---|---:|---:|
-| Automated tests | 184 | 231 |
-| Statement coverage | 99% | 99% |
-| Branch coverage | 96% | 99% |
-| Combined coverage | 98% | 99% |
-| Application statement coverage | 97% | 100% |
-| Application branch coverage | 75% | 100% |
-| Application combined coverage | 95% | 100% |
-| Executable statements | 533 | 574 |
-| Uncovered statements | 7 | 4 |
-| Partial branches | 4 | 1 |
-
-**Additional Verification:**
-
-- Application integrity tests: 47/47 passed
-- Application integrity execution time: 5.67 seconds
-- Existing pipeline functionality tests: 13/13 passed
-- Pipeline functionality execution time: 4.64 seconds
-- Full regression tests: 231/231 passed
-- Full regression execution time: 22.63 seconds
-- HTML coverage regression: 231/231 passed
-- HTML coverage execution time: 22.99 seconds
-- Application compilation: Successful
-
-**Static Application Security Testing:**
-
-- Tool: Bandit
-- Lines of code scanned: 1,260
-- High-severity findings: 0
-- Medium-severity findings: 0
-- Low-severity findings: 0
-- Suppressed lines: 0
-- Skipped files: 0
-
-**Live Application Verification:**
-
-- Intelligence source: CISA KEV
-- Catalog version: 2026.11.25
-- Collection attempts: 1
-- Records collected: 1,805
-- Records normalized: 1,805
-- Unique records: 1,805
-- Duplicates removed: 0
-- Records reloaded: 1,805
-- Snapshot integrity verified: True
-- Pipeline execution time: 2.45 seconds
-- Application exit code: 0
-- Pipeline status: SUCCESS
-
-**Outcome:**
-
-Successfully strengthened application-level intelligence integrity controls without introducing detected functional regressions. Achieved complete measured statement and branch coverage of application orchestration and 99% combined coverage across the measured application.
-
-All established foundational MVP testing and coverage targets have been exceeded.
-
-**Residual Risks:**
-
-- Failed pipeline executions may leave unverified or incomplete snapshots on disk.
-- Snapshot persistence is not transactional across the complete collection run.
-- SHA-256 checksums do not provide cryptographic source authentication.
-- Verification logic shares the application's execution environment and trust boundary.
-- Deep-copy verification introduces additional memory consumption.
-- Conflicting records with identical collection timestamps retain the first encountered record.
-- Normalization verification does not independently validate every enrichment or classification field.
-- Structurally valid intelligence may still contain misleading or adversarial content.
-- Four executable statements and one partial branch remain uncovered within JSON storage.
-- AI-specific security controls remain outside the foundational MVP scope.
-- High code coverage and clean static analysis do not guarantee the absence of vulnerabilities.
-
-**Engineering Decision:**
-
-Conclude implementation-focused security hardening for the foundational MVP. Prioritize formal threat modeling, residual risk documentation, reproducible dependencies, continuous integration, and release preparation rather than pursuing additional coverage solely for numerical improvement.
-
-**Next Milestone:** Phase 1C.6 — Threat Model and Residual Risk Documentation.
-### Phase 1C.6 — Threat Model and Residual Risk Documentation
-
-**Status:** Complete
-
-**Assessment Date:** November 25, 2026
-
-**Objective:**
-
-Establish formal security architecture documentation, identify application threats, document implemented mitigations, and define residual risk treatment requirements before foundational MVP release and future AI integration.
-
-**Documentation Deliverables:**
-
-- System architecture documentation
-- Current architecture diagram
-- Future agentic architecture diagram
-- Data flow diagram
-- Trust boundary definitions
-- Protected asset inventory
-- Security objectives
-- Threat actor assessment
-- Attack surface inventory
-- STRIDE threat assessment
-- Qualitative risk assessment methodology
-- Residual risk register
-- Security control traceability matrix
-- Security verification baseline
-- Future AI threat assessment
-- Agentic security requirements
-- Residual risk treatment roadmap
-- Risk acceptance and review requirements
-
-**Threat Modeling Results:**
+Added 30 adversarial tests covering malformed or missing config, **unsafe YAML object construction**, bad registries, wrong URL and allowlist types, explicit source enablement, case-insensitive hostnames, and standard HTTPS port handling.
+
+![Coverage after configuration hardening: 96% combined](images/coverage-1c2-config-96.png)
+
+### 1C.3: Storage hardening
+
+- 50 MiB snapshot cap, 128-byte checksum-file cap, bounded reads
+- SHA-256 format and encoding validation
+- Strict JSON parsing: **duplicate key rejection**, **nonstandard constant rejection** (`NaN`/`Infinity`), top-level structure validation
+- Improved atomic write handling, cleanup of incomplete snapshots, filename collision protection
+- Live run re-verified: 1,805 records, integrity True, 2.27 s
+
+![Coverage after storage hardening: 97% combined](images/coverage-1c3-storage-97.png)
+
+### 1C.4: Collector hardening
+
+- Revalidation of limits and source URL *before* every request
+- Strict `Content-Length` validation; compressed-response rejection; declared-vs-received size consistency; empty-response rejection
+- Duplicate JSON keys, nonstandard constants, and **duplicate CVE IDs** rejected
+- Retry delay capped at 60 s
+- Live run re-verified: 200 OK, 1 attempt, 1,805 records, 2.51 s
+
+![Coverage after collector hardening: 98% combined](images/coverage-1c4-collector-98.png)
+
+### 1C.5: Application integrity testing
+
+Goal: **detected tampering, inconsistency, or incomplete processing must never yield a successful run.**
+
+- Normalized-record verification: deterministic IDs, provenance, collection timestamps, source field comparisons, duplicate CVE detection
+- Independent deep-copy baseline for dedup identity, content, and latest-record checks
+- Tested same-count modifications, in-place mutations, storage failure propagation, sanitized exception logging, and entry-point behavior
+- Third-party HTTP logging restricted
+- Live run re-verified: 1,805 records, integrity True, 2.45 s, exit 0
+
+![Coverage after application integrity testing: 99% combined](images/coverage-1c5-integrity-99.png)
+
+### Hardening progression
+
+| Metric | Baseline (1C.1) | 1C.2 | 1C.3 | 1C.4 | 1C.5 |
+|---|---:|---:|---:|---:|---:|
+| Automated tests | 84 | 114 | 139 | 184 | **231** |
+| Statement coverage | 95% | 96% | 98% | 99% | **99%** |
+| Branch coverage | 84% | 91% | 94% | 96% | **99%** |
+| Combined coverage | 93% | 96% | 97% | 98% | **99%** |
+| Executable statements | 453 | 453 | 499 | 533 | 574 |
+| Uncovered statements | 24 | 16 | 11 | 7 | **4** |
+| Partial branches | 13 | 7 | 6 | 4 | **1** |
+
+*Remaining gap: 4 statements and 1 partial branch in `json_storage.py`. Engineering decision: stop chasing coverage for its own sake and prioritize threat modeling, dependency reproducibility, CI, and release prep.*
+
+---
+
+## 5. Phase 1C.6: Threat Model and Residual Risk Documentation
+
+**Deliverables:** architecture (current and future agentic), data flow diagram, trust boundaries, asset inventory, STRIDE assessment, residual risk register, control traceability matrix, future AI threat assessment, and risk-acceptance requirements.
 
 | Metric | Result |
 |---|---:|
 | STRIDE categories assessed | 6 |
-| Protected assets identified | 14 |
-| Current trust boundaries | 4 |
-| Future trust boundaries | 3 |
+| Protected assets | 14 |
+| Trust boundaries (current / future) | 4 / 3 |
 | Current threat scenarios | 17 |
 | Documented security controls | 15 |
 | Future AI threat scenarios | 14 |
-| Critical residual risks | 0 |
-| High residual risks | 1 |
-| Medium residual risks | 15 |
-| Low residual risks | 1 |
+| Residual risks: Critical / High / Medium / Low | 0 / 1 / 15 / 1 |
 
-**Security Verification Baseline:**
+**Decisions:** STRIDE as the methodology; qualitative likelihood-impact scoring; implemented controls kept distinct from future requirements; deterministic processing preserved before AI; all external intelligence untrusted; **verified-run acceptance required before any automated downstream consumption**.
 
-- Automated tests: 231/231 passed
-- Combined coverage: 99%
-- Statement coverage: 99%
-- Branch coverage: 99%
-- Static security findings: 0
-- Lines scanned by Bandit: 1,260
-- Live intelligence records verified: 1,805
-- Live pipeline execution time: 2.45 seconds
+---
 
-**Engineering Decisions:**
+## 6. Phase 1D.1: Dependency Pinning and Reproducible Environments
 
-- Adopt STRIDE as the foundational threat modeling methodology.
-- Use qualitative likelihood-impact risk assessment.
-- Distinguish implemented controls from future security requirements.
-- Preserve deterministic intelligence processing before introducing AI.
-- Treat all external intelligence as untrusted data.
-- Require explicit review of residual risks.
-- Prioritize dependency reproducibility and continuous integration during release preparation.
-- Require verified-run acceptance before automated downstream intelligence consumption.
+**Goal:** Make the environment reproducible, harden the software supply chain, and confirm the 231-test and security baseline still holds.
 
-**Outcome:**
+**What was done**
 
-Established initial security architecture and threat modeling documentation for the foundational MVP. Identified current security limitations and future AI-specific risks without expanding application functionality.
+- Documented Python 3.12.10 as the tested runtime and captured the original dependency inventory
+- Split **runtime** (6 direct, 16 resolved packages) from **development** (5 additional direct, 49 resolved) dependencies
+- Generated lock files with **SHA-256 artifact hashes**: 243 runtime, 752 development, 2 bootstrap (997 total)
+- Verified **binary-only, hash-enforced installs** in independent runtime and development environments (0 dependency conflicts)
+- Reproduced the full regression baseline and left the original working environment untouched (0 changes detected)
 
-**Completion Criteria:**
-
-- Review architecture documentation.
-- Review STRIDE threat assessment.
-- Review proposed residual risk classifications.
-- Confirm documentation accurately represents implemented functionality.
-- Commit and push documentation changes.
-
-**Next Milestone:** Phase 1D.1 — Dependency Pinning and Reproducible Environments.
-### Phase 1D.1 — Dependency Pinning and Reproducible Environments
-
-**Status:** Complete
-
-**Completion Date:** November 25, 2026
-
-**Objective:**
-
-Establish reproducible application environments, strengthen software supply chain security, identify dependency-related vulnerabilities, and preserve the existing functional and security testing baseline.
-
-#### Implementation
-
-- Captured the original working environment dependency inventory.
-- Documented Python 3.12.10 as the tested runtime.
-- Separated runtime and development dependencies.
-- Pinned direct dependency versions.
-- Established baseline dependency constraints.
-- Created an isolated dependency resolution environment.
-- Generated runtime and development dependency lock files.
-- Generated SHA-256 package artifact hashes.
-- Resolved packaging tool pinning warnings.
-- Created independent runtime and development verification environments.
-- Verified binary-only, hash-enforced package installation.
-- Reproduced the original development dependency inventory.
-- Conducted dependency consistency checks.
-- Conducted dependency vulnerability assessments.
-- Reproduced the functional and security regression baseline.
-- Repeated static application security testing.
-- Identified vulnerable bootstrap packaging infrastructure.
-- Implemented a dedicated bootstrap dependency lock.
-- Remediated the affected package installer.
-- Verified corrected provisioning in an additional clean environment.
-- Audited the dependency resolution tooling environment.
-- Verified live intelligence collection across clean environments.
-- Preserved the original working environment.
-
-#### Dependency Management Results
-
-| Metric | Result |
+| Regression check | Result |
 |---|---:|
-| Python version | 3.12.10 |
-| Verified pip version | 26.3 |
-| Pip-tools version | 7.7.0 |
-| Direct runtime dependencies | 6 |
-| Direct development dependencies | 5 additional |
-| Resolved runtime packages | 16 |
-| Resolved development packages | 49 |
-| Bootstrap packages | 1 |
-| Runtime artifact hash entries | 243 |
-| Development artifact hash entries | 752 |
-| Bootstrap artifact hash entries | 2 |
-| Total hash entries across lock files | 997 |
-| Dependency conflicts | 0 |
-| Original environment changes | 0 detected |
+| Tests passed | 231 (65 functional, 166 security-focused) |
+| Combined coverage | 99.30% (proposed 98% minimum) |
+| Bandit findings (1,260 lines) | 0 |
+| Regression time | 20.25 s |
 
-#### Regression Testing Results
+### Finding TL-SCA-001: Vulnerable bootstrap installer
 
-| Metric | Result |
-|---|---:|
-| Automated tests passed | 231 |
-| Functional tests | 65 |
-| Security-focused tests | 166 |
-| Failed tests | 0 |
-| Combined coverage | 99.30% |
-| Minimum coverage threshold | 98% |
-| Regression execution time | 20.25 seconds |
-| Bandit findings | 0 |
-| Lines scanned | 1,260 |
-| Suppressed lines | 0 |
-| Skipped files | 0 |
+| | |
+|---|---|
+| **Affected component** | pip 25.0.1 |
+| **How it was found** | pip-audit on the *installed* environment (the lock files audited clean) |
+| **Initial result** | 12 findings, 6 unique advisories, 1 package, exit code 1 |
+| **Root cause** | Virtual environment creation bundled an outdated pip, outside the application dependency lock |
+| **Remediation** | Added a dedicated bootstrap lock (`requirements-bootstrap.txt` → `requirements-bootstrap-lock.txt`), pinned pip 26.3 with hash verification, and updated the provisioning sequence |
+| **Verification** | Re-audit plus a fresh runtime environment: 0 vulnerabilities, exit code 0 |
+| **Status** | Remediated and verified in tested environments |
 
-#### Security Finding TL-SCA-001
+**Final audits:** all 7 targets (bootstrap, runtime, and development locks; remediated runtime, development, and newly provisioned environments; resolution tooling) reported 0 known vulnerabilities.
 
-**Finding:** Vulnerable Bootstrap Package Installer.
-
-**Affected Component:** pip 25.0.1.
-
-**Discovery Method:** Installed environment software composition analysis.
-
-**Initial Results:**
-
-- 12 reported vulnerability findings.
-- Six unique advisory identifiers.
-- One affected package.
-- Vulnerability assessment exit code: 1.
-
-**Root Cause:**
-
-Python virtual environment creation introduced an outdated bootstrap installer independently of the application dependency lock.
-
-**Remediation:**
-
-- Created requirements-bootstrap.txt.
-- Generated requirements-bootstrap-lock.txt.
-- Pinned pip 26.3.
-- Enforced package artifact hash verification.
-- Updated the environment provisioning sequence.
-- Repeated vulnerability assessments.
-- Verified remediation in an independently provisioned runtime environment.
-
-**Final Results:**
-
-- Known vulnerabilities reported: 0.
-- Dependency conflicts: 0.
-- Vulnerability assessment exit code: 0.
-- Application execution exit code: 0.
-- Intelligence integrity verification: Successful.
-
-**Finding Status:** Remediated and verified in tested environments.
-
-#### Final Vulnerability Assessments
-
-| Assessment target | Known vulnerabilities | Exit code |
-|---|---:|---:|
-| Bootstrap dependency lock | 0 | 0 |
-| Runtime dependency lock | 0 | 0 |
-| Development dependency lock | 0 | 0 |
-| Remediated runtime environment | 0 | 0 |
-| Development environment | 0 | 0 |
-| Newly provisioned runtime environment | 0 | 0 |
-| Dependency resolution tooling | 0 | 0 |
-
-#### Live Pipeline Verification
+**Live pipeline across clean environments**
 
 | Metric | Runtime | Development | Remediated runtime |
 |---|---:|---:|---:|
-| Records collected | 1,805 | 1,805 | 1,805 |
-| Records normalized | 1,805 | 1,805 | 1,805 |
-| Unique records | 1,805 | 1,805 | 1,805 |
-| Records reloaded | 1,805 | 1,805 | 1,805 |
+| Records collected / normalized / unique / reloaded | 1,805 | 1,805 | 1,805 |
 | Duplicates removed | 0 | 0 | 0 |
 | Integrity verified | True | True | True |
-| Execution time (seconds) | 2.20 | 2.26 | 2.27 |
+| Execution time | 2.20 s | 2.26 s | 2.27 s |
 | Exit code | 0 | 0 | 0 |
 
-#### Engineering Decisions
+**Decisions:** keep previously verified dependency versions; separate packaging infrastructure from application dependencies; require hash verification and binary-only installs; isolate resolution tooling; audit both declarations *and* installed environments.
 
-- Preserve previously verified application dependency versions.
-- Separate packaging infrastructure from application dependencies.
-- Maintain independent runtime and development dependency locks.
-- Require SHA-256 package artifact hash verification.
-- Restrict locked installations to binary distributions.
-- Isolate dependency resolution tooling.
-- Preserve the original working development environment.
-- Establish a proposed minimum combined coverage threshold of 98%.
-- Audit both dependency declarations and actual installed environments.
-- Retain the existing E-03 residual risk classification pending further assessment.
+**Limitations:** hashes don't prove publisher authenticity; audits can't catch malicious or undisclosed vulnerabilities; cross-platform reproducibility is unverified (Windows baseline only); the Python interpreter itself isn't assessed; bootstrap remediation still runs the bundled installer once; resolution tooling has no hash-locked file yet; CI enforcement is pending.
 
-#### Security Limitations
+**Cost:** $0.00 in additional API or infrastructure spend.
 
-- Package hashes do not independently establish publisher authenticity.
-- Vulnerability assessments cannot identify every malicious package or undisclosed vulnerability.
-- Cross-platform reproducibility remains unverified.
-- Python interpreter security requires independent assessment.
-- Initial bootstrap remediation still executes the bundled installer.
-- Dependency resolution tooling is inventoried but does not have a dedicated hash-verified lock.
-- Automated CI enforcement remains pending.
+---
 
-#### Outcome
+## 7. Key Residual Risks
 
-Successfully established a reproducible Windows dependency management baseline while preserving the existing functional and security testing results.
+- **No DNS-level SSRF protection or network egress restriction** (URL validation alone doesn't eliminate SSRF)
+- **Checksums prove integrity, not authenticity** (SHA-256 doesn't authenticate the source)
+- **Persistence is not fully transactional**, so failed runs may leave unverified snapshots; filesystem race conditions are possible; no retention policy
+- **Size limits don't bound parsing memory or time**; no strict end-to-end timeout; no `Retry-After` handling
+- **Verification shares the app's trust boundary** and adds memory overhead via deep copies
+- **Structurally valid ≠ trustworthy:** intelligence can still be misleading or adversarial (including prompt injection once AI is introduced)
+- **Tie handling:** identical collection timestamps retain the first record encountered
+- **Compressed-response rejection** may limit future provider compatibility
+- **Supply chain:** package hashes don't prove publisher authenticity, the bootstrap installer is still executed once, resolution tooling isn't hash-locked, the Python interpreter is unassessed, and cross-platform reproducibility is unverified
+- **High coverage and clean scans do not prove the absence of vulnerabilities**
+- **AI-specific controls are out of scope** for the foundational MVP
 
-Identified and remediated a vulnerable bootstrap package installer that was not detected by application dependency lock assessments.
+---
 
-Verified the corrected provisioning process through clean environment installation, vulnerability reassessment, dependency consistency checks, and successful live application execution.
+## 8. Lessons Learned (writeup-ready)
 
-#### Project Expenditure
+1. **Build the deterministic foundation first.** AI analysis is far easier to secure when the data underneath it is validated, provenance-tracked, and integrity-checked.
+2. **Validation is not verification.** Schema checks improve integrity but don't establish factual accuracy or stop prompt injection.
+3. **Fail closed, and verify before succeeding.** The pipeline can only report SUCCESS after end-to-end consistency checks pass.
+4. **Adversarial tests find what happy-path tests miss:** duplicate JSON keys, `NaN` constants, compressed responses, oversized or mismatched bodies, same-count tampering.
+5. **Coverage is a signal, not proof.** The numbers helped guide the work, but threat modeling is what exposed the residual risks.
+6. **Schema changes need regression tests.** The 1B.5 failure showed how data-contract changes break downstream components.
+7. **Document limitations honestly.** Every phase lists residual risks, which makes the project more credible, not less.
+8. **Audit what's installed, not just what's declared.** Clean lock files hid a vulnerable pip that virtual environment creation had bundled in (TL-SCA-001). Scanning the real environment caught it.
+9. **Reproducibility is a security control.** Hash-pinned, binary-only installs mean a rebuilt environment matches the tested one, and the 231-test baseline reproduced with no changes.
 
-Additional API or infrastructure expenditure: $0.00.
+---
 
-#### Next Milestone
+## 9. Next Steps
 
-Phase 1D.2 — GitHub Actions Continuous Integration and Automated Security Gates.
+- [ ] Review and commit the Phase 1C.6 threat model documentation (if not already pushed)
+- [x] **Phase 1D.1:** Dependency pinning and reproducible environments
+- [ ] **Phase 1D.2:** GitHub Actions CI with automated security gates (tests, Bandit, pip-audit, 98% coverage threshold)
+- [ ] Hash-locked lock file for dependency resolution tooling
+- [ ] Verify cross-platform reproducibility (beyond Windows)
+- [ ] Foundational MVP release preparation
+- [ ] Use the residual-risk roadmap as the entry point for future agentic and AI security controls
