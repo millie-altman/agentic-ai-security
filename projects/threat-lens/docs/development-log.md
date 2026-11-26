@@ -644,3 +644,146 @@ Successfully implemented and verified additional storage security controls witho
 - Automated security scanning does not establish the absence of vulnerabilities.
 
 **Next Milestone:** Phase 1C.4 — Collector Security Hardening.
+### Phase 1C.4 — Collector Security Hardening
+
+**Status:** In Progress — Pending Verification
+
+**Objective:**
+
+Strengthen the external intelligence ingestion boundary and reduce the risk of malformed intelligence, resource exhaustion, unauthorized network requests, and intelligence poisoning.
+
+**Implementation:**
+
+- Expanded collection configuration validation.
+- Implemented collection limit revalidation before network requests.
+- Implemented source URL revalidation.
+- Implemented strict Content-Length validation.
+- Implemented compressed response rejection.
+- Implemented declared and received response size consistency checks.
+- Implemented empty response rejection.
+- Implemented duplicate JSON key rejection.
+- Implemented nonstandard JSON constant rejection.
+- Implemented duplicate CVE identifier detection.
+- Established a maximum retry delay of 60 seconds.
+- Improved retryable HTTP status logging.
+- Developed 44 additional collector security regression tests.
+- Preserved existing collector functionality and public interfaces.
+
+**Verification Results:**
+
+- Collector security tests: Pending
+- Existing collector functionality tests: Pending
+- Full regression tests: Pending
+- Statement coverage: Pending
+- Branch coverage: Pending
+- Combined coverage: Pending
+- Static security analysis: Pending
+- Live intelligence collection: Pending
+- Application exit code: Pending
+
+**Residual Risks:**
+
+- DNS-level SSRF protections and network egress restrictions remain unimplemented.
+- HTTP request timeouts do not enforce a strict end-to-end execution deadline.
+- Retry-After header handling remains unimplemented.
+- Response size limits do not guarantee bounded JSON parsing memory consumption.
+- Structurally valid intelligence may still contain misleading or adversarial content.
+- Compressed response rejection may affect compatibility with future intelligence providers.
+- Source authenticity and semantic intelligence verification require additional controls.
+
+**Next Milestone:** Phase 1C.5 — Application Integrity Testing.
+### Phase 1C.4 — Collector Security Hardening
+
+**Status:** Complete
+
+**Assessment Date:** November 25, 2026
+
+**Objective:**
+
+Strengthen the external intelligence ingestion boundary and reduce the risk of malformed intelligence, resource exhaustion, unauthorized network requests, and intelligence poisoning.
+
+**Implementation:**
+
+- Expanded collection configuration validation.
+- Implemented collection limit revalidation before network requests.
+- Implemented source URL revalidation.
+- Implemented strict Content-Length validation.
+- Implemented compressed response rejection.
+- Implemented declared and received response size consistency checks.
+- Implemented empty response rejection.
+- Implemented duplicate JSON key rejection.
+- Implemented nonstandard JSON constant rejection.
+- Implemented duplicate CVE identifier detection.
+- Established a maximum retry delay of 60 seconds.
+- Improved retryable HTTP status logging.
+- Developed 45 additional collector security regression tests.
+- Preserved existing collector functionality and public interfaces.
+
+**Automated Testing Results:**
+
+| Metric | Before | After |
+|---|---:|---:|
+| Automated tests | 139 | 184 |
+| Statement coverage | 98% | 99% |
+| Branch coverage | 94% | 96% |
+| Combined coverage | 97% | 98% |
+| Collector statement coverage | 95% | 100% |
+| Collector branch coverage | 91% | 100% |
+| Collector combined coverage | 94% | 100% |
+| Executable statements | 499 | 533 |
+| Uncovered statements | 11 | 7 |
+| Partial branches | 6 | 4 |
+
+**Additional Verification:**
+
+- Collector security tests: 45/45 passed
+- Collector security execution time: 3.80 seconds
+- Existing collector functionality tests: 12/12 passed
+- Collector functionality execution time: 5.89 seconds
+- Full regression tests: 184/184 passed
+- Full regression execution time: 17.97 seconds
+- HTML coverage regression: 184/184 passed
+- HTML coverage execution time: 16.52 seconds
+
+**Static Application Security Testing:**
+
+- Tool: Bandit
+- Lines of code scanned: 1,143
+- High-severity findings: 0
+- Medium-severity findings: 0
+- Low-severity findings: 0
+- Suppressed findings: 0
+- Skipped files: 0
+
+**Live Application Verification:**
+
+- Intelligence source: CISA KEV
+- Catalog version: 2026.11.25
+- HTTP response: 200 OK
+- Collection attempts: 1
+- Records collected: 1,805
+- Records normalized: 1,805
+- Unique records: 1,805
+- Duplicates removed: 0
+- Records reloaded: 1,805
+- Snapshot integrity verified: True
+- Pipeline execution time: 2.51 seconds
+- Application exit code: 0
+- Pipeline status: SUCCESS
+
+**Outcome:**
+
+Successfully strengthened the external intelligence collection boundary without introducing functional regressions. Achieved complete measured statement and branch coverage of the CISA collector and exceeded all established MVP coverage targets.
+
+**Residual Risks:**
+
+- DNS-level SSRF protections and network egress restrictions remain unimplemented.
+- HTTP request timeouts do not enforce a strict end-to-end execution deadline.
+- Retry-After header handling remains unimplemented.
+- Response size limits do not guarantee bounded JSON parsing memory consumption.
+- Structurally valid intelligence may still contain misleading or adversarial content.
+- Compressed response rejection may affect compatibility with future intelligence providers.
+- Source authenticity and semantic intelligence verification require additional controls.
+- Complete code coverage does not establish the absence of vulnerabilities.
+
+**Next Milestone:** Phase 1C.5 — Application Integrity Testing.
