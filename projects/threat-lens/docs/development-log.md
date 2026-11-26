@@ -553,3 +553,94 @@ Automated scanning did not identify known dependency vulnerabilities or insecure
 Successfully expanded adversarial configuration testing and achieved complete measured statement and branch coverage of the configuration loader without introducing regressions.
 
 **Next Milestone:** Storage and collector security hardening, application integrity testing, and residual risk assessment.
+### Phase 1C.3 — Storage Security Hardening
+
+**Status:** Complete
+
+**Assessment Date:** November 25, 2026
+
+**Objective:**
+
+Strengthen the security and reliability of local intelligence storage before introducing AI-powered analysis and agentic workflows.
+
+**Implementation:**
+
+- Established a maximum intelligence snapshot size of 50 MiB.
+- Established a maximum checksum file size of 128 bytes.
+- Implemented bounded filesystem reads.
+- Implemented SHA-256 checksum format and encoding validation.
+- Implemented strict JSON parsing controls.
+- Implemented duplicate JSON key rejection.
+- Implemented nonstandard numeric constant rejection.
+- Implemented top-level JSON structure validation.
+- Improved atomic write exception handling.
+- Implemented best-effort incomplete snapshot cleanup.
+- Added protection against ordinary snapshot filename collisions.
+- Developed 25 additional storage security regression tests.
+
+**Automated Testing Results:**
+
+| Metric | Before | After |
+|---|---:|---:|
+| Total automated tests | 114 | 139 |
+| Statement coverage | 96% | 98% |
+| Branch coverage | 91% | 94% |
+| Combined coverage | 96% | 97% |
+| Storage statement coverage | 90% | 97% |
+| Storage branch coverage | 75% | 95% |
+| Storage combined coverage | 89% | 97% |
+| Executable statements | 453 | 499 |
+| Uncovered statements | 16 | 11 |
+| Partial branches | 7 | 6 |
+
+**Additional Verification:**
+
+- Storage security tests: 25/25 passed
+- Storage security execution time: 2.00 seconds
+- Existing storage functionality tests: 13/13 passed
+- Storage functionality execution time: 1.22 seconds
+- Full regression tests: 139/139 passed
+- Full regression execution time: 12.85 seconds
+- HTML coverage regression: 139/139 passed
+- HTML coverage regression execution time: 16.10 seconds
+
+**Static Application Security Testing:**
+
+- Tool: Bandit
+- Lines of code scanned: 1,042
+- High-severity findings: 0
+- Medium-severity findings: 0
+- Low-severity findings: 0
+- Suppressed findings: 0
+- Skipped files: 0
+
+**Live Application Verification:**
+
+- Intelligence source: CISA KEV
+- Catalog version: 2026.11.25
+- HTTP response: 200 OK
+- Records collected: 1,805
+- Records normalized: 1,805
+- Unique records: 1,805
+- Duplicates removed: 0
+- Records reloaded: 1,805
+- Snapshot integrity verified: True
+- Pipeline execution time: 2.27 seconds
+- Application exit code: 0
+- Pipeline status: SUCCESS
+
+**Outcome:**
+
+Successfully implemented and verified additional storage security controls without introducing functional regressions. All proposed MVP coverage targets remain satisfied.
+
+**Residual Risks:**
+
+- SHA-256 checksums provide integrity verification but not independent authenticity.
+- Snapshot and checksum persistence is not fully transactional.
+- Filesystem race conditions remain possible.
+- Snapshot retention policies remain unimplemented.
+- File size limits do not independently guarantee bounded parsing memory or execution time.
+- Structurally valid intelligence remains untrusted external content.
+- Automated security scanning does not establish the absence of vulnerabilities.
+
+**Next Milestone:** Phase 1C.4 — Collector Security Hardening.
