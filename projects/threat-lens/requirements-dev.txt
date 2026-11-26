@@ -1,11 +1,22 @@
-# ThreatLens development and security testing dependencies
 
+# ThreatLens Development Dependencies
+# Python 3.12.10
+# Baseline: November 25, 2026
+
+# Include runtime dependencies
 -r requirements.txt
 
+# Automated testing
 pytest==9.2.0
+
+# Statement and branch coverage
 pytest-cov==7.1.0
+
+# Mocked HTTP requests
 respx==0.23.1
 
-# Security assessment tools
-pip-audit==2.10.1
+# Static application security testing
 bandit==1.9.4
+
+# Dependency vulnerability auditing
+pip-audit==2.10.1

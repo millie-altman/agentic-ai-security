@@ -569,6 +569,55 @@ A compromised dependency introduces unauthorized code execution or data access.
 | E-02 | Unsafe configuration | High | Medium | Mitigate |
 | E-03 | Supply chain compromise | High | High | Release preparation priority |
 
+### E-03 — Supply Chain Risk Treatment Update
+
+**Assessment Date:** November 25, 2026
+
+**Residual Risk:** High
+
+**Additional Implemented Controls:**
+
+- Separation of runtime, development, and bootstrap dependencies.
+- Exact direct dependency version pinning.
+- Resolved transitive dependency lock files.
+- SHA-256 package artifact hash verification.
+- Binary-only package installation.
+- Isolated dependency resolution tooling.
+- Clean environment reproducibility verification.
+- Dependency consistency validation.
+- Dependency lock vulnerability assessments.
+- Installed environment vulnerability assessments.
+- Dependency resolution tooling vulnerability assessment.
+- Functional and security regression testing against locked dependencies.
+
+**Associated Security Finding:** TL-SCA-001 — Vulnerable Bootstrap Package Installer.
+
+An installed runtime environment assessment identified 12 reported vulnerability findings representing six unique advisory identifiers affecting pip 25.0.1.
+
+The issue was remediated by introducing a dedicated, hash-verified bootstrap dependency lock containing pip 26.3 and updating the environment provisioning sequence.
+
+Post-remediation assessments reported no known vulnerabilities. A newly provisioned runtime environment successfully completed dependency consistency checks, vulnerability assessment, and live intelligence pipeline execution.
+
+**Remaining Risk Treatment:**
+
+- Implement automated CI security gates.
+- Enforce controlled bootstrap installation.
+- Automate dependency lock and installed environment audits.
+- Verify cross-platform reproducibility.
+- Establish dependency update monitoring.
+- Assess Python runtime security independently.
+- Improve dependency resolution tooling reproducibility.
+- Evaluate package provenance and publisher trust.
+- Review CI workflow permissions and third-party action integrity.
+
+**Residual Risk Justification:**
+
+Although dependency integrity and reproducibility controls have been strengthened, package provenance, undisclosed vulnerabilities, compromised upstream infrastructure, initial bootstrap exposure, and CI enforcement remain relevant supply chain risks.
+
+The existing High residual risk classification is retained pending further assessment.
+
+**Supporting Documentation:** dependency-management.md and development-log.md.
+
 Risk treatment recommendations remain subject to project owner approval.
 
 No residual risk is considered formally accepted solely through inclusion in this register.

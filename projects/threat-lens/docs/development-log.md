@@ -1031,3 +1031,176 @@ Established initial security architecture and threat modeling documentation for 
 - Commit and push documentation changes.
 
 **Next Milestone:** Phase 1D.1 — Dependency Pinning and Reproducible Environments.
+### Phase 1D.1 — Dependency Pinning and Reproducible Environments
+
+**Status:** Complete
+
+**Completion Date:** November 25, 2026
+
+**Objective:**
+
+Establish reproducible application environments, strengthen software supply chain security, identify dependency-related vulnerabilities, and preserve the existing functional and security testing baseline.
+
+#### Implementation
+
+- Captured the original working environment dependency inventory.
+- Documented Python 3.12.10 as the tested runtime.
+- Separated runtime and development dependencies.
+- Pinned direct dependency versions.
+- Established baseline dependency constraints.
+- Created an isolated dependency resolution environment.
+- Generated runtime and development dependency lock files.
+- Generated SHA-256 package artifact hashes.
+- Resolved packaging tool pinning warnings.
+- Created independent runtime and development verification environments.
+- Verified binary-only, hash-enforced package installation.
+- Reproduced the original development dependency inventory.
+- Conducted dependency consistency checks.
+- Conducted dependency vulnerability assessments.
+- Reproduced the functional and security regression baseline.
+- Repeated static application security testing.
+- Identified vulnerable bootstrap packaging infrastructure.
+- Implemented a dedicated bootstrap dependency lock.
+- Remediated the affected package installer.
+- Verified corrected provisioning in an additional clean environment.
+- Audited the dependency resolution tooling environment.
+- Verified live intelligence collection across clean environments.
+- Preserved the original working environment.
+
+#### Dependency Management Results
+
+| Metric | Result |
+|---|---:|
+| Python version | 3.12.10 |
+| Verified pip version | 26.3 |
+| Pip-tools version | 7.7.0 |
+| Direct runtime dependencies | 6 |
+| Direct development dependencies | 5 additional |
+| Resolved runtime packages | 16 |
+| Resolved development packages | 49 |
+| Bootstrap packages | 1 |
+| Runtime artifact hash entries | 243 |
+| Development artifact hash entries | 752 |
+| Bootstrap artifact hash entries | 2 |
+| Total hash entries across lock files | 997 |
+| Dependency conflicts | 0 |
+| Original environment changes | 0 detected |
+
+#### Regression Testing Results
+
+| Metric | Result |
+|---|---:|
+| Automated tests passed | 231 |
+| Functional tests | 65 |
+| Security-focused tests | 166 |
+| Failed tests | 0 |
+| Combined coverage | 99.30% |
+| Minimum coverage threshold | 98% |
+| Regression execution time | 20.25 seconds |
+| Bandit findings | 0 |
+| Lines scanned | 1,260 |
+| Suppressed lines | 0 |
+| Skipped files | 0 |
+
+#### Security Finding TL-SCA-001
+
+**Finding:** Vulnerable Bootstrap Package Installer.
+
+**Affected Component:** pip 25.0.1.
+
+**Discovery Method:** Installed environment software composition analysis.
+
+**Initial Results:**
+
+- 12 reported vulnerability findings.
+- Six unique advisory identifiers.
+- One affected package.
+- Vulnerability assessment exit code: 1.
+
+**Root Cause:**
+
+Python virtual environment creation introduced an outdated bootstrap installer independently of the application dependency lock.
+
+**Remediation:**
+
+- Created requirements-bootstrap.txt.
+- Generated requirements-bootstrap-lock.txt.
+- Pinned pip 26.3.
+- Enforced package artifact hash verification.
+- Updated the environment provisioning sequence.
+- Repeated vulnerability assessments.
+- Verified remediation in an independently provisioned runtime environment.
+
+**Final Results:**
+
+- Known vulnerabilities reported: 0.
+- Dependency conflicts: 0.
+- Vulnerability assessment exit code: 0.
+- Application execution exit code: 0.
+- Intelligence integrity verification: Successful.
+
+**Finding Status:** Remediated and verified in tested environments.
+
+#### Final Vulnerability Assessments
+
+| Assessment target | Known vulnerabilities | Exit code |
+|---|---:|---:|
+| Bootstrap dependency lock | 0 | 0 |
+| Runtime dependency lock | 0 | 0 |
+| Development dependency lock | 0 | 0 |
+| Remediated runtime environment | 0 | 0 |
+| Development environment | 0 | 0 |
+| Newly provisioned runtime environment | 0 | 0 |
+| Dependency resolution tooling | 0 | 0 |
+
+#### Live Pipeline Verification
+
+| Metric | Runtime | Development | Remediated runtime |
+|---|---:|---:|---:|
+| Records collected | 1,805 | 1,805 | 1,805 |
+| Records normalized | 1,805 | 1,805 | 1,805 |
+| Unique records | 1,805 | 1,805 | 1,805 |
+| Records reloaded | 1,805 | 1,805 | 1,805 |
+| Duplicates removed | 0 | 0 | 0 |
+| Integrity verified | True | True | True |
+| Execution time (seconds) | 2.20 | 2.26 | 2.27 |
+| Exit code | 0 | 0 | 0 |
+
+#### Engineering Decisions
+
+- Preserve previously verified application dependency versions.
+- Separate packaging infrastructure from application dependencies.
+- Maintain independent runtime and development dependency locks.
+- Require SHA-256 package artifact hash verification.
+- Restrict locked installations to binary distributions.
+- Isolate dependency resolution tooling.
+- Preserve the original working development environment.
+- Establish a proposed minimum combined coverage threshold of 98%.
+- Audit both dependency declarations and actual installed environments.
+- Retain the existing E-03 residual risk classification pending further assessment.
+
+#### Security Limitations
+
+- Package hashes do not independently establish publisher authenticity.
+- Vulnerability assessments cannot identify every malicious package or undisclosed vulnerability.
+- Cross-platform reproducibility remains unverified.
+- Python interpreter security requires independent assessment.
+- Initial bootstrap remediation still executes the bundled installer.
+- Dependency resolution tooling is inventoried but does not have a dedicated hash-verified lock.
+- Automated CI enforcement remains pending.
+
+#### Outcome
+
+Successfully established a reproducible Windows dependency management baseline while preserving the existing functional and security testing results.
+
+Identified and remediated a vulnerable bootstrap package installer that was not detected by application dependency lock assessments.
+
+Verified the corrected provisioning process through clean environment installation, vulnerability reassessment, dependency consistency checks, and successful live application execution.
+
+#### Project Expenditure
+
+Additional API or infrastructure expenditure: $0.00.
+
+#### Next Milestone
+
+Phase 1D.2 — GitHub Actions Continuous Integration and Automated Security Gates.

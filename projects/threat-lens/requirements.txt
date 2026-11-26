@@ -1,10 +1,22 @@
 
-httpx
-feedparser
-pydantic
-pydantic-settings
-python-dotenv
-PyYAML
-pytest
-pytest-cov
-respx
+# ThreatLens Runtime Dependencies
+# Python 3.12.10
+# Baseline: November 25, 2026
+
+# HTTP intelligence collection
+httpx==0.28.1
+
+# RSS and Atom feed collection
+feedparser==6.0.14
+
+# Intelligence schemas and validation
+pydantic==2.14.4
+
+# Application settings management
+pydantic-settings==2.16.3
+
+# Environment variable management
+python-dotenv==1.2.4
+
+# YAML configuration management
+PyYAML==6.0.4
