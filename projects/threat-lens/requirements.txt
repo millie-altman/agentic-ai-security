@@ -1,0 +1,10 @@
+
+httpx
+feedparser
+pydantic
+pydantic-settings
+python-dotenv
+PyYAML
+pytest
+pytest-cov
+respx
