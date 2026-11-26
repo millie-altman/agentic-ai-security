@@ -949,3 +949,85 @@ All established foundational MVP testing and coverage targets have been exceeded
 Conclude implementation-focused security hardening for the foundational MVP. Prioritize formal threat modeling, residual risk documentation, reproducible dependencies, continuous integration, and release preparation rather than pursuing additional coverage solely for numerical improvement.
 
 **Next Milestone:** Phase 1C.6 — Threat Model and Residual Risk Documentation.
+### Phase 1C.6 — Threat Model and Residual Risk Documentation
+
+**Status:** Complete
+
+**Assessment Date:** November 25, 2026
+
+**Objective:**
+
+Establish formal security architecture documentation, identify application threats, document implemented mitigations, and define residual risk treatment requirements before foundational MVP release and future AI integration.
+
+**Documentation Deliverables:**
+
+- System architecture documentation
+- Current architecture diagram
+- Future agentic architecture diagram
+- Data flow diagram
+- Trust boundary definitions
+- Protected asset inventory
+- Security objectives
+- Threat actor assessment
+- Attack surface inventory
+- STRIDE threat assessment
+- Qualitative risk assessment methodology
+- Residual risk register
+- Security control traceability matrix
+- Security verification baseline
+- Future AI threat assessment
+- Agentic security requirements
+- Residual risk treatment roadmap
+- Risk acceptance and review requirements
+
+**Threat Modeling Results:**
+
+| Metric | Result |
+|---|---:|
+| STRIDE categories assessed | 6 |
+| Protected assets identified | 14 |
+| Current trust boundaries | 4 |
+| Future trust boundaries | 3 |
+| Current threat scenarios | 17 |
+| Documented security controls | 15 |
+| Future AI threat scenarios | 14 |
+| Critical residual risks | 0 |
+| High residual risks | 1 |
+| Medium residual risks | 15 |
+| Low residual risks | 1 |
+
+**Security Verification Baseline:**
+
+- Automated tests: 231/231 passed
+- Combined coverage: 99%
+- Statement coverage: 99%
+- Branch coverage: 99%
+- Static security findings: 0
+- Lines scanned by Bandit: 1,260
+- Live intelligence records verified: 1,805
+- Live pipeline execution time: 2.45 seconds
+
+**Engineering Decisions:**
+
+- Adopt STRIDE as the foundational threat modeling methodology.
+- Use qualitative likelihood-impact risk assessment.
+- Distinguish implemented controls from future security requirements.
+- Preserve deterministic intelligence processing before introducing AI.
+- Treat all external intelligence as untrusted data.
+- Require explicit review of residual risks.
+- Prioritize dependency reproducibility and continuous integration during release preparation.
+- Require verified-run acceptance before automated downstream intelligence consumption.
+
+**Outcome:**
+
+Established initial security architecture and threat modeling documentation for the foundational MVP. Identified current security limitations and future AI-specific risks without expanding application functionality.
+
+**Completion Criteria:**
+
+- Review architecture documentation.
+- Review STRIDE threat assessment.
+- Review proposed residual risk classifications.
+- Confirm documentation accurately represents implemented functionality.
+- Commit and push documentation changes.
+
+**Next Milestone:** Phase 1D.1 — Dependency Pinning and Reproducible Environments.
