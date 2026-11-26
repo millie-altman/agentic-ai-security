@@ -1,0 +1,37 @@
+
+application:
+  name: ThreatLens
+  version: "0.1.0"
+  environment: development
+
+collection:
+  request_timeout_seconds: 30
+  max_retries: 3
+  retry_delay_seconds: 2
+  max_response_size_bytes: 20971520
+  verify_ssl: true
+  follow_redirects: false
+
+security:
+  enforce_source_allowlist: true
+  require_https: true
+  validate_input: true
+  treat_external_content_as_untrusted: true
+  allow_automatic_execution: false
+  require_human_approval_for_publishing: true
+
+storage:
+  raw_directory: "data/raw"
+  processed_directory: "data/processed"
+  reports_directory: "reports"
+  output_format: json
+
+logging:
+  enabled: true
+  level: INFO
+  directory: logs
+  log_sensitive_data: false
+
+ai:
+  enabled: false
+  human_in_the_loop: true

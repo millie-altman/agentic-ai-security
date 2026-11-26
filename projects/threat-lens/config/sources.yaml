@@ -1,0 +1,42 @@
+
+# ThreatLens Intelligence Source Registry
+# External content must always be treated as untrusted data.
+
+version: "1.0"
+
+sources:
+  cisa_kev:
+    name: "CISA Known Exploited Vulnerabilities"
+    organization: "Cybersecurity and Infrastructure Security Agency"
+    enabled: true
+    type: json
+    category: vulnerability_intelligence
+    trust_level: high
+    url: "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    allowed_hosts:
+      - "www.cisa.gov"
+    authentication_required: false
+
+  nvd:
+    name: "National Vulnerability Database"
+    organization: "National Institute of Standards and Technology"
+    enabled: false
+    type: api
+    category: vulnerability_intelligence
+    trust_level: high
+    url: "https://services.nvd.nist.gov/rest/json/cves/2.0"
+    allowed_hosts:
+      - "services.nvd.nist.gov"
+    authentication_required: false
+
+  cisa_advisories:
+    name: "CISA Cybersecurity Advisories"
+    organization: "Cybersecurity and Infrastructure Security Agency"
+    enabled: false
+    type: rss
+    category: threat_intelligence
+    trust_level: high
+    url: "https://www.cisa.gov/cybersecurity-advisories/all.xml"
+    allowed_hosts:
+      - "www.cisa.gov"
+    authentication_required: false
