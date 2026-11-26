@@ -420,3 +420,136 @@ Successfully validated the collection, normalization, and deduplication pipeline
 Successfully executed the complete ThreatLens intelligence pipeline as a standalone application. All collected intelligence records were normalized, persisted, reloaded, and verified without unexpected data loss.
 
 **Next Milestone:** Foundational pipeline security hardening, documentation, and MVP release preparation.
+### Phase 1C — Foundational Security Hardening
+
+**Status:** In Progress
+
+**Objective:**
+
+Evaluate and strengthen the security posture of the ThreatLens foundational intelligence pipeline before introducing AI-powered analysis and autonomous workflows.
+
+**Assessment Methodology:**
+
+- Software composition analysis using pip-audit
+- Static application security testing using Bandit
+- Statement and branch coverage analysis
+- Configuration security review
+- Intelligence ingestion security review
+- Local storage security review
+- Secret management and Git exclusion verification
+- Threat modeling and trust boundary analysis
+- Security regression testing
+
+**Baseline Metrics:**
+
+- Automated tests: 84
+- Statement coverage: 95%
+- Executable statements: 453
+- Live intelligence records successfully processed: 1,805
+- Pipeline execution time: 2.09 seconds
+
+**Assessment Results:**
+
+- Dependency vulnerabilities: Pending
+- Static analysis findings: Pending
+- Branch coverage: Pending
+- Secret exclusion verification: Pending
+- Threat model review: Pending
+- Remediation and regression testing: Pending
+
+**Next Milestone:** Address identified security findings, document residual risks, and prepare the foundational MVP for release.
+### Phase 1C.1 — Foundational Security Audit
+
+**Status:** Baseline assessment complete
+
+**Assessment Date:** November 25, 2026
+
+**Software Composition Analysis:**
+
+- Tool: pip-audit v2.10.1
+- Installed environment vulnerabilities: 0 known vulnerabilities identified
+- Declared dependency vulnerabilities: 0 known vulnerabilities identified
+- Dependency consistency: Passed
+
+**Static Application Security Testing:**
+
+- Tool: Bandit v1.9.4
+- Lines of code scanned: 956
+- High-severity findings: 0
+- Medium-severity findings: 0
+- Low-severity findings: 0
+- Suppressed findings: 0
+- Skipped files: 0
+
+**Automated Testing and Coverage:**
+
+- Total automated tests: 84/84 passed
+- Statement coverage: 95%
+- Branch coverage: 84%
+- Combined coverage: 93%
+- Executable statements: 453
+- Uncovered statements: 24
+- Branch destinations: 80
+- Partial branches: 13
+- Regression execution time: 10.96 seconds
+
+**Secret Management and Repository Hygiene:**
+
+- Environment file exclusions: Verified
+- Virtual environment exclusions: Verified
+- Coverage artifact exclusions: Verified
+- Intelligence snapshot exclusions: Verified
+- Security audit report exclusions: Verified
+- Sensitive filename screening: Passed
+- Only .env.example identified by the filename screening command
+
+**Assessment Limitations:**
+
+Automated scanning did not identify known dependency vulnerabilities or insecure coding patterns within the assessed scope. These results do not establish the absence of vulnerabilities. Manual threat modeling, adversarial testing, and additional security control verification remain necessary.
+
+**Next Milestone:** Targeted security regression testing and architectural hardening.
+### Phase 1C.2 — Configuration Security Regression Testing
+
+**Status:** Complete
+
+**Assessment Date:** November 25, 2026
+
+**Implementation:**
+
+- Developed 30 additional configuration security test cases.
+- Verified rejection of malformed and missing configuration files.
+- Verified rejection of unsafe YAML object construction.
+- Validated malformed intelligence source registries.
+- Verified rejection of invalid URL and allowlist types.
+- Validated explicit source enablement requirements.
+- Verified case-insensitive hostname validation.
+- Verified standard HTTPS port handling.
+
+**Verification Results:**
+
+| Metric | Before | After |
+|---|---:|---:|
+| Automated tests | 84 | 114 |
+| Statement coverage | 95% | 96% |
+| Branch coverage | 84% | 91% |
+| Combined coverage | 93% | 96% |
+| Configuration statement coverage | 87% | 100% |
+| Configuration branch coverage | 80% | 100% |
+| Uncovered statements | 24 | 16 |
+| Partial branches | 13 | 7 |
+
+**Additional Results:**
+
+- Configuration hardening tests: 30/30 passed
+- Configuration hardening execution time: 0.46 seconds
+- Total regression tests: 114/114 passed
+- Regression execution time: 12.20 seconds
+- Failed tests: 0
+- HTML coverage report: Successfully generated
+- Proposed statement and branch coverage targets: Achieved
+
+**Outcome:**
+
+Successfully expanded adversarial configuration testing and achieved complete measured statement and branch coverage of the configuration loader without introducing regressions.
+
+**Next Milestone:** Storage and collector security hardening, application integrity testing, and residual risk assessment.
