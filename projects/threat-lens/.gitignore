@@ -51,3 +51,9 @@ Thumbs.db
 
 # Local IDE configuration
 .vscode/
+
+# Test coverage artifacts
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
