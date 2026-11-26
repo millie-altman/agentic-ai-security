@@ -99,3 +99,104 @@
 URL validation provides an initial defensive layer but does not independently eliminate SSRF. Additional protections are required for DNS resolution, redirects, network egress, configuration integrity, and response size enforcement.
 
 **Next Milestone:** Implement the CISA KEV intelligence collector using HTTPX and validated source configuration.
+### Phase 1B.4 — CISA KEV Intelligence Collection
+
+**Status:** Pending verification.
+
+**Implementation:**
+
+- Developed an HTTPX-based CISA KEV intelligence collector.
+- Integrated approved source configuration and URL validation.
+- Implemented TLS certificate verification and disabled automatic redirects.
+- Established bounded network retries and exponential backoff.
+- Implemented streaming response size restrictions.
+- Validated HTTP response content types and JSON structures.
+- Integrated Pydantic catalog validation.
+- Implemented catalog count consistency checks.
+- Developed 12 automated collector tests using mocked HTTP responses.
+
+**Security Concepts Explored:**
+
+- Secure API integration
+- Network trust boundaries
+- Resource exhaustion prevention
+- Defensive response validation
+- Secure logging
+- Resilient error handling
+- HTTP request mocking
+- Regression testing
+- Defense in depth
+
+**Verification Results:**
+
+- Collector tests: Pending
+- Total regression tests: Pending
+- Statement coverage: Pending
+- Live CISA collection: Pending
+- Total vulnerabilities retrieved: Pending
+
+**Next Milestone:** Normalize collected vulnerability intelligence into standardized ThreatLens intelligence records and implement deduplication.
+### Phase 1B.5 — Intelligence Normalization
+
+**Status:** Pending verification.
+
+**Implementation:**
+
+- Developed a standardized intelligence normalization engine.
+- Implemented source-specific field mapping.
+- Introduced deterministic UUID5 record identifiers.
+- Expanded intelligence schemas to preserve supporting notes and catalog metadata.
+- Preserved source attribution, publication timestamps, and collection timestamps.
+- Implemented rule-based intelligence tagging.
+- Maintained conservative severity classifications and human review defaults.
+- Developed ten automated normalization tests.
+
+**Security and Engineering Concepts Explored:**
+
+- Data normalization
+- Idempotent processing
+- Deterministic identifiers
+- Intelligence provenance
+- Data integrity
+- Evidence preservation
+- Separation of collection and analysis
+- Regression testing
+
+**Verification Results:**
+
+- Normalization tests: Pending
+- Total regression tests: Pending
+- Statement coverage: Pending
+- Live records normalized: Pending
+
+**Next Milestone:** Implement intelligence deduplication and local JSON persistence.
+### Phase 1B.4 — Verification Results
+
+- Collector tests: 12/12 passed
+- Collector statement coverage: 95%
+- Live CISA collection: Successful
+- First retrieved vulnerability: CVE-2026-103406
+- Status: Complete
+
+### Phase 1B.5 — Verification Results
+
+- Normalization tests: 10/10 passed
+- Normalizer statement coverage: 100%
+- Intelligence schema statement coverage: 100%
+- Total regression tests: 48/48 passed
+- Overall statement coverage: 95%
+- Regression suite execution time: 6.48 seconds
+- Live normalization: Pending verification
+
+**Troubleshooting and Resolution:**
+
+Initial normalization tests failed following modifications to the intelligence schemas. The schema module was replaced with a consolidated implementation incorporating source version, source publication timestamp, and supporting notes.
+
+Following the update, compilation succeeded and all 48 regression tests passed.
+
+**Lessons Learned:**
+
+- Schema changes must remain compatible with downstream processing components.
+- Regression testing helps identify integration failures following data contract modifications.
+- Statement coverage provides measurable insight into testing completeness but does not guarantee security or correctness.
+- Synthetic testing and live integration testing serve different verification purposes.

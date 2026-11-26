@@ -68,9 +68,20 @@ class CISAVulnerability(BaseModel):
         max_length=32,
     )
 
-    vendorProject: str = Field(min_length=1, max_length=500)
-    product: str = Field(min_length=1, max_length=500)
-    vulnerabilityName: str = Field(min_length=1, max_length=1000)
+    vendorProject: str = Field(
+        min_length=1,
+        max_length=500,
+    )
+
+    product: str = Field(
+        min_length=1,
+        max_length=500,
+    )
+
+    vulnerabilityName: str = Field(
+        min_length=1,
+        max_length=1000,
+    )
 
     dateAdded: date
 
@@ -88,7 +99,10 @@ class CISAVulnerability(BaseModel):
 
     knownRansomwareCampaignUse: RansomwareAssociation
 
-    notes: str = Field(default="", max_length=20000)
+    notes: str = Field(
+        default="",
+        max_length=20000,
+    )
 
     cwes: list[str] = Field(default_factory=list)
 
@@ -101,6 +115,7 @@ class CISACatalog(BaseModel):
     title: str
     catalogVersion: str
     dateReleased: AwareDatetime
+
     count: int = Field(ge=0)
 
     vulnerabilities: list[CISAVulnerability]
@@ -120,6 +135,10 @@ class SourceMetadata(BaseModel):
     source_url: HttpUrl
 
     trust_level: TrustLevel = TrustLevel.UNKNOWN
+
+    source_version: str | None = None
+
+    source_published_at: AwareDatetime | None = None
 
     collected_at: AwareDatetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)
@@ -144,7 +163,10 @@ class IntelligenceRecord(BaseModel):
 
     intelligence_type: IntelligenceType
 
-    title: str = Field(min_length=1, max_length=1000)
+    title: str = Field(
+        min_length=1,
+        max_length=1000,
+    )
 
     description: str = Field(
         min_length=1,
@@ -175,10 +197,19 @@ class IntelligenceRecord(BaseModel):
 
     remediation: str | None = None
 
+    notes: str | None = Field(
+        default=None,
+        max_length=20000,
+    )
+
     cwes: list[str] = Field(default_factory=list)
+
     indicators: list[str] = Field(default_factory=list)
+
     mitre_techniques: list[str] = Field(default_factory=list)
+
     tags: list[str] = Field(default_factory=list)
 
     ai_analyzed: bool = False
+
     human_reviewed: bool = False
