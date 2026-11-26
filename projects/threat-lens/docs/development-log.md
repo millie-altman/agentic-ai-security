@@ -69,3 +69,33 @@
 **Design Consideration:** Schema validation improves data integrity but does not establish factual accuracy or eliminate prompt injection risks. External intelligence remains untrusted throughout the processing pipeline.
 
 **Next Milestone:** Implement secure configuration loading and the CISA KEV intelligence collector.
+### Phase 1B.3 — Secure Configuration Management
+
+**Status:** Complete upon successful test execution.
+
+**Implementation:**
+
+- Implemented centralized YAML configuration loading.
+- Established custom configuration and security exceptions.
+- Enforced intelligence source activation policies.
+- Implemented HTTPS-only source validation.
+- Established exact hostname allowlisting.
+- Restricted embedded credentials, unauthorized ports, malformed URLs, and URL fragments.
+- Developed parameterized security tests for unauthorized intelligence sources.
+
+**Security Concepts Explored:**
+
+- Server-Side Request Forgery (SSRF)
+- Network trust boundaries
+- Allowlist-based security
+- Fail-closed validation
+- Secure configuration management
+- Exception handling
+- Adversarial input testing
+- Parameterized automated testing
+
+**Design Limitations:**
+
+URL validation provides an initial defensive layer but does not independently eliminate SSRF. Additional protections are required for DNS resolution, redirects, network egress, configuration integrity, and response size enforcement.
+
+**Next Milestone:** Implement the CISA KEV intelligence collector using HTTPX and validated source configuration.
