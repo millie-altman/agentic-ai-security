@@ -1,6 +1,6 @@
 
 """
-ThreatLens — Cyber Threat Intelligence
+ThreatLens - Cyber Threat Intelligence
 
 Application entry point for the foundational
 intelligence collection and processing pipeline.
@@ -13,6 +13,7 @@ import sys
 import time
 
 from datetime import datetime, timezone
+from uuid import NAMESPACE_URL, uuid5
 
 from src.config_loader import (
     load_settings,
@@ -32,6 +33,11 @@ from src.processing.deduplicator import (
     IntelligenceDeduplicator,
 )
 
+from src.schemas.intelligence import (
+    CISACatalog,
+    IntelligenceRecord,
+)
+
 from src.storage.json_storage import (
     JSONStorage,
     StorageError,
@@ -49,6 +55,11 @@ def configure_logging(settings: dict) -> None:
     """Initialize application logging."""
 
     logging_settings = settings.get("logging", {})
+
+    if not isinstance(logging_settings, dict):
+        raise ConfigurationError(
+            "Invalid logging configuration."
+        )
 
     level_name = str(
         logging_settings.get("level", "INFO")
@@ -80,6 +91,10 @@ def configure_logging(settings: dict) -> None:
 
     logging.Formatter.converter = time.gmtime
 
+    # Reduce unnecessary third-party HTTP logging.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 
 def print_banner() -> None:
     """Display application identification."""
@@ -93,14 +108,140 @@ def print_banner() -> None:
     print()
 
 
+def verify_normalized_records(
+    catalog: CISACatalog,
+    records: list[IntelligenceRecord],
+    collected_at: datetime,
+) -> None:
+    """Verify normalized intelligence against its source."""
+
+    if len(records) != catalog.count:
+        raise PipelineError(
+            "Normalization record count mismatch."
+        )
+
+    expected = {
+        vulnerability.cveID: vulnerability
+        for vulnerability in catalog.vulnerabilities
+    }
+
+    if len(expected) != catalog.count:
+        raise PipelineError(
+            "Source catalog contains inconsistent identifiers."
+        )
+
+    observed = set()
+
+    for record in records:
+
+        if record.cve_id not in expected:
+            raise PipelineError(
+                "Unexpected normalized CVE identifier."
+            )
+
+        if record.cve_id in observed:
+            raise PipelineError(
+                "Duplicate normalized CVE identifier."
+            )
+
+        observed.add(record.cve_id)
+
+        vulnerability = expected[record.cve_id]
+
+        expected_id = uuid5(
+            NAMESPACE_URL,
+            f"threatlens:cisa_kev:{record.cve_id}",
+        )
+
+        if record.record_id != expected_id:
+            raise PipelineError(
+                "Normalized record identity mismatch."
+            )
+
+        if (
+            record.source.source_id != "cisa_kev"
+            or record.source.source_version
+            != catalog.catalogVersion
+            or record.source.source_published_at
+            != catalog.dateReleased
+            or record.source.collected_at != collected_at
+        ):
+            raise PipelineError(
+                "Normalized source provenance mismatch."
+            )
+
+        expected_fields = {
+            "title": vulnerability.vulnerabilityName,
+            "description": vulnerability.shortDescription,
+            "vendor": vulnerability.vendorProject,
+            "product": vulnerability.product,
+            "date_added": vulnerability.dateAdded,
+            "remediation_due_date": vulnerability.dueDate,
+            "remediation": vulnerability.requiredAction,
+            "notes": vulnerability.notes,
+            "cwes": vulnerability.cwes,
+            "ransomware_association": (
+                vulnerability.knownRansomwareCampaignUse
+            ),
+            "known_exploited": True,
+            "ai_analyzed": False,
+            "human_reviewed": False,
+        }
+
+        for field, expected_value in expected_fields.items():
+
+            if getattr(record, field) != expected_value:
+                raise PipelineError(
+                    "Normalized intelligence field mismatch."
+                )
+
+
+def verify_deduplicated_records(
+    original_records: list[IntelligenceRecord],
+    unique_records: list[IntelligenceRecord],
+) -> None:
+    """Verify deduplication preserved expected intelligence."""
+
+    expected = {}
+
+    for record in original_records:
+
+        existing = expected.get(record.record_id)
+
+        if (
+            existing is None
+            or record.source.collected_at
+            > existing.source.collected_at
+        ):
+            expected[record.record_id] = record
+
+    actual = {
+        record.record_id: record
+        for record in unique_records
+    }
+
+    if len(actual) != len(unique_records):
+        raise PipelineError(
+            "Duplicate identifiers remain after processing."
+        )
+
+    if actual.keys() != expected.keys():
+        raise PipelineError(
+            "Deduplication record identity mismatch."
+        )
+
+    if actual != expected:
+        raise PipelineError(
+            "Deduplication record content mismatch."
+        )
+
+
 def run_pipeline() -> dict:
     """Execute the complete intelligence pipeline."""
 
     start_time = time.perf_counter()
 
     logger.info("Initializing intelligence pipeline.")
-
-    # Initialize application components.
 
     collector = CISACollector()
     normalizer = IntelligenceNormalizer()
@@ -124,10 +265,18 @@ def run_pipeline() -> dict:
         collected_at=collected_at,
     )
 
-    if len(records) != catalog.count:
-        raise PipelineError(
-            "Normalization record count mismatch."
-        )
+    verify_normalized_records(
+        catalog,
+        records,
+        collected_at,
+    )
+
+    # Preserve a separate verification baseline.
+
+    original_records = [
+        record.model_copy(deep=True)
+        for record in records
+    ]
 
     # Remove duplicate intelligence records.
 
@@ -137,8 +286,13 @@ def run_pipeline() -> dict:
         records
     )
 
+    verify_deduplicated_records(
+        original_records,
+        unique_records,
+    )
+
     duplicates_removed = (
-        len(records) - len(unique_records)
+        len(original_records) - len(unique_records)
     )
 
     # Persist source and processed intelligence.
@@ -175,15 +329,10 @@ def run_pipeline() -> dict:
             "Processed intelligence verification failed."
         )
 
-    unique_ids = {
-        record.record_id
-        for record in loaded_records
-    }
-
-    if len(unique_ids) != len(loaded_records):
-        raise PipelineError(
-            "Duplicate identifiers remain after processing."
-        )
+    verify_deduplicated_records(
+        original_records,
+        loaded_records,
+    )
 
     duration = time.perf_counter() - start_time
 
@@ -196,7 +345,7 @@ def run_pipeline() -> dict:
         "catalog_version": catalog.catalogVersion,
         "collected_at": collected_at.isoformat(),
         "records_collected": catalog.count,
-        "records_normalized": len(records),
+        "records_normalized": len(original_records),
         "unique_records": len(unique_records),
         "duplicates_removed": duplicates_removed,
         "records_reloaded": len(loaded_records),
@@ -251,6 +400,7 @@ def main() -> int:
     """Initialize and execute ThreatLens."""
 
     try:
+
         settings = load_settings()
 
         configure_logging(settings)
